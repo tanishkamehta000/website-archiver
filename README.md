@@ -2,8 +2,6 @@
 
 An end-to-end web archiving tool (Wayback-style). Enter a URL, crawl same-host pages, rewrite assets, and serve snapshots locally with version history. Includes a progress UI, one-click re-capture, “All sites” overview, a side-by-side **Compare** view, and an interactive **Crawl Map**.
 
----
-
 ## Features
 
 - **Capture & Snapshot**
