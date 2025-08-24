@@ -1,3 +1,5 @@
+// crawl map: left (root) to right layered tree
+// loads graph as a JSON, performs BFS (root can be chosen), and orders nodes by depth
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -22,6 +24,7 @@ export default function Map() {
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // get nodes/edges for this host + timestamp
   useEffect(() => {
     let cancelled = false
     async function load() {
@@ -42,6 +45,7 @@ export default function Map() {
     return () => { cancelled = true }
   }, [host, ts])
 
+  // create layout for graph: choose root (default: homepage), BFS for depth, group nodes into levels
   const layout = useMemo<Layout | null>(() => {
     if (!graph) return null
 
@@ -53,6 +57,7 @@ export default function Map() {
 
     const root = chooseRoot(nodes)
 
+    // adjacency
     const out: Record<string, string[]> = {}
     for (const e of edges) {
       ;(out[e.source] ||= []).push(e.target)
@@ -72,6 +77,7 @@ export default function Map() {
       }
     }
 
+    // compute depth levels
     let maxDepth = 0
     const levelsObj: Record<number, string[]> = {}
     for (const id of keep) {
@@ -82,6 +88,8 @@ export default function Map() {
         if (lv > maxDepth) maxDepth = lv
       }
     }
+
+    // unreachable nodes (since we have a max_pages)
     const unreachable = [...keep].filter(id => !(id in depth))
     const unreachableLevel = maxDepth + (root ? 1 : 0)
     if (unreachable.length) {
@@ -94,6 +102,7 @@ export default function Map() {
       arr.sort((a, b) => pathKey(a).localeCompare(pathKey(b)) || a.localeCompare(b))
     }
 
+    // row = sibling index; col = depth
     const W = 1000, H = 600
     const marginX = 120, marginY = 40
     const colCount = root ? (maxDepth + 1) : Object.keys(levelsObj).length
@@ -112,6 +121,7 @@ export default function Map() {
       })
     }
 
+    // only use edges whose endpoints we positions
     const keptEdges = edges.filter(e => positions[e.source] && positions[e.target])
     return { W, H, positions, edges: keptEdges, root }
   }, [graph])
@@ -152,6 +162,7 @@ export default function Map() {
   )
 }
 
+// homepage or shortest path URL
 function chooseRoot(nodes: GNode[]): string | undefined {
   const withUrls = nodes.filter(n => {
     try { new URL(n.id); return true } catch { return false }
@@ -164,6 +175,7 @@ function chooseRoot(nodes: GNode[]): string | undefined {
   return withUrls.sort((a, b) => (pathKey(a.id).length - pathKey(b.id).length))[0].id
 }
 
+// extract pathname (fallback to raw id if it is'nt a url)
 function pathKey(u: string): string {
   try {
     const url = new URL(u)
@@ -173,6 +185,7 @@ function pathKey(u: string): string {
   }
 }
 
+// shorten long pathnames
 function safeLabel(u: string): string {
   const p = pathKey(u)
   return p.length > 40 ? p.slice(0, 37) + '…' : p

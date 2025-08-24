@@ -1,5 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
+/** start new archive job and return its job_id. */
 export async function startArchive(url: string, depth = 1, max_pages?: number) {
   const body: any = { url, depth }
   if (typeof max_pages === 'number') body.max_pages = max_pages
@@ -24,6 +25,7 @@ export async function listSnapshots(host: string) {
   return res.json()
 }
 
+/** delete single snapshot */
 export async function deleteSnapshot(host: string, ts: string) {
   const res = await fetch(`${API_BASE}/api/site/${host}/${ts}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(await res.text())

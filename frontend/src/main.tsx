@@ -1,6 +1,8 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+
+// create pages
 import App from './pages/App'
 import Home from './pages/Home'
 import SiteDetail from './pages/SiteDetail'
@@ -8,6 +10,7 @@ import Viewer from './pages/Viewer'
 import Sites from './pages/Sites'
 import Map from './pages/Map'
 
+// define routes
 const router = createBrowserRouter([
   {
     path: '/',

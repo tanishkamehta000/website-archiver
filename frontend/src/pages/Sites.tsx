@@ -1,3 +1,4 @@
+// sites page: lists all archived hosts with snapshot counts and last capture time
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -14,6 +15,7 @@ export default function Sites() {
   const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
   useEffect(() => {
+    //fetch list of all hosts
     async function go() {
       try {
         const res = await fetch(`${API_BASE}/api/sites`)
@@ -29,6 +31,7 @@ export default function Sites() {
     go()
   }, [])
 
+  // format for table display
   const fmtInt = (n?: number) =>
     typeof n === 'number' ? new Intl.NumberFormat().format(n) : '0'
 

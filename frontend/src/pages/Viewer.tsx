@@ -1,7 +1,11 @@
+// helps view snapshot frame
 import { useParams } from 'react-router-dom'
 
 export default function Viewer() {
+  // read route
   const { host, ts } = useParams<{ host: string, ts: string }>()
+  
+  // build static file
   const src = `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/archive/${host}/${ts}/local/index.html`
   return (
     <div style={{ height: '80vh' }}>

@@ -1,3 +1,4 @@
+// home page: start capture of website, log progress, and delete everything button.
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { startArchive, jobStatus, deleteAllSites } from '../lib/api'
@@ -11,6 +12,7 @@ export default function Home() {
   const [clearing, setClearing] = useState(false)
   const nav = useNavigate()
 
+  // start new archive job and track progress until it finishes
   async function handleStart() {
     try {
       setRunning(true)
@@ -18,6 +20,7 @@ export default function Home() {
       const { job_id } = await startArchive(url, depth, typeof maxPages === 'number' ? maxPages : undefined)
       setLog(l => [...l, `Job ${job_id} started`])
 
+      // simple progress loop
       let done = false
       while (!done) {
         const s: any = await jobStatus(job_id)
@@ -29,6 +32,7 @@ export default function Home() {
           done = true
           const host = s.host
           if (s.status === 'success') {
+            // automatic jump to website detail page when done
             nav(`/site/${host}`)
           }
         } else {
