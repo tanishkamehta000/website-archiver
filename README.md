@@ -1,6 +1,6 @@
 # Website Archiver (React + FastAPI)
 
-An end-to-end web archiving tool (Wayback-style). Enter a URL, crawl same-host pages, rewrite assets, and serve snapshots locally with version history. Includes a progress UI, one-click re-capture, “All sites” overview, a side-by-side **Compare** view, and an interactive **Crawl Map**.
+An end-to-end web archiving tool (Wayback-style). Enter a URL, crawl same-host pages, rewrite assets, and serve snapshots locally with version history. Includes a progress UI, one-click re-capture and delete, “All sites” overview, and an interactive Crawl Map.
 
 ## Features
 
