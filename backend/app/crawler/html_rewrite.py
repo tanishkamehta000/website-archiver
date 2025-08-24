@@ -1,16 +1,15 @@
+# rewriting html url for local archive paths
 from bs4 import BeautifulSoup
 from typing import Tuple, List
 from .url_utils import normalize_url, same_host
 
 def rewrite_html(root_url: str, html: str, to_local) -> Tuple[str, List[str], List[str]]:
-    """
-    Return (rewritten_html, page_links, asset_urls).
-    Keeps it simple: rewrites <a href>, <img src>, <script src>, <link rel=stylesheet href>.
-    """
+    # lxml for speed
     soup = BeautifulSoup(html, "lxml")
     links: List[str] = []
     assets: List[str] = []
 
+    # local paths
     for a in soup.find_all("a"):
         href = a.get("href")
         if not href: 
@@ -20,6 +19,7 @@ def rewrite_html(root_url: str, html: str, to_local) -> Tuple[str, List[str], Li
             links.append(absu)
             a["href"] = to_local(absu)
 
+    # help rewrite and track for download
     def add_asset(tag, attr):
         val = tag.get(attr)
         if not val:
@@ -32,6 +32,7 @@ def rewrite_html(root_url: str, html: str, to_local) -> Tuple[str, List[str], Li
     for tag in soup.find_all(["img", "script"]):
         add_asset(tag, "src")
 
+    #stylesheets
     for link in soup.find_all("link"):
         rels = set(link.get("rel") or [])
         if "stylesheet" in rels:
@@ -42,6 +43,7 @@ def rewrite_html(root_url: str, html: str, to_local) -> Tuple[str, List[str], Li
                     assets.append(absu)
                     link["href"] = to_local(absu)
 
+    # preserve order
     def dedup(seq: List[str]) -> List[str]:
         seen = set(); out = []
         for x in seq:

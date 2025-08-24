@@ -1,3 +1,4 @@
+# FastAPI wiring: CORS, API routes, and static snapshots
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -7,6 +8,8 @@ from .views.serve import router as serve_router, SNAP_ROOT
 
 app = FastAPI(title="Website Archiver")
 
+# vite calls API
+# TODO: tighten "*"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

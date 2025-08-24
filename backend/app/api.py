@@ -1,10 +1,11 @@
+# archive api endpoints
 import asyncio, time
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, AnyHttpUrl
 from .crawler.crawl import Crawler
 from .crawler.url_utils import host_of
-from .storage.fs_store import load_index, delete_snapshot, delete_host, delete_all, list_sites  # added list_sites
+from .storage.fs_store import load_index, delete_snapshot, delete_host, delete_all, list_sites
 
 router = APIRouter()
 
@@ -13,6 +14,7 @@ class ArchiveReq(BaseModel):
     depth: int | None = 1
     max_pages: int | None = None
 
+# in-memory job registry
 _jobs: Dict[str, Dict[str, Any]] = {}
 
 def _job_id(host: str, ts: str) -> str:
@@ -58,6 +60,7 @@ async def start_archive(req: ArchiveReq):
         'started_at': started_at,
         'details': {'pages': 0, 'bytes': 0, 'limit': max_pages}
     }
+    # forget task; status is tracked in _jobs
     asyncio.create_task(_run_job(job_id, str(req.url), req.depth or 1, ts, started_at, max_pages))
     return {'job_id': job_id}
 
@@ -68,7 +71,7 @@ async def job_status(job_id: str):
         raise HTTPException(404, 'job not found')
     return job
 
-# Use disk for the sites list so it persists across restarts
+# use disk for sites list (persist across restarts)
 @router.get('/sites')
 async def sites():
     return list_sites()

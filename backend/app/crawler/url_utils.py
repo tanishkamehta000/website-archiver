@@ -1,6 +1,8 @@
+# URL helpers for crawling and storage
 from urllib.parse import urlparse, urljoin, urldefrag
 
 def normalize_url(base: str, maybe_relative: str) -> str:
+    # resolving relative url
     joined = urljoin(base, maybe_relative)
     clean, _ = urldefrag(joined)
     return clean

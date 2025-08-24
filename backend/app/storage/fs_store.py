@@ -1,3 +1,4 @@
+# storage helpers for snapshots
 import json
 import shutil
 from pathlib import Path
@@ -8,9 +9,11 @@ ROOT = Path(__file__).resolve().parents[2] / "snapshots"
 def host_dir(host: str) -> Path:
     return ROOT / host
 
+# return dir path for snapshot
 def ts_dir(host: str, ts: str) -> Path:
     return host_dir(host) / ts
 
+# create snapshot directories and return root
 def ensure_dirs(host: str, ts: str) -> Path:
     d = ts_dir(host, ts)
     d.mkdir(parents=True, exist_ok=True)
@@ -33,6 +36,7 @@ def load_index(host: str) -> List[Dict[str, Any]]:
         return []
     return json.loads(idx.read_text())
 
+# persist index.html
 def save_index(host: str, entries: List[Dict[str, Any]]):
     hdir = host_dir(host)
     hdir.mkdir(parents=True, exist_ok=True)

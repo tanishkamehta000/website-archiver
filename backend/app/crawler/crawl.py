@@ -1,3 +1,6 @@
+# crawler for single host snapshot (BFS)
+# tracks progress for getting HTML pages from host, rewrites to local paths, tracks simple link graph for map visualization
+
 import asyncio, hashlib, time, os, json
 from urllib.parse import urlparse
 from typing import Set, Tuple
@@ -7,8 +10,10 @@ from .url_utils import normalize_url, same_host, host_of
 from .html_rewrite import rewrite_html
 from .css_rewrite import rewrite_css
 
+# timeout
 DEFAULT_TIMEOUT = ClientTimeout(total=20)
 
+# static assests
 _ASSET_EXTS = {
     ".png",".jpg",".jpeg",".gif",".webp",".svg",".ico",
     ".css",".js",".map",
@@ -21,6 +26,7 @@ def _ext_from_url(url: str) -> str:
     _, ext = os.path.splitext(path)
     return ext.lower()
 
+# short name
 def choose_name(url: str, ext: str = "") -> str:
     h = hashlib.sha1(url.encode("utf-8")).hexdigest()[:10]
     safe = url.replace("http://", "").replace("https://", "").replace("/", "_").replace("?", "_").replace(":", "_")
@@ -33,31 +39,39 @@ class Crawler:
         self.ts = ts
         self.depth = depth
         self.page_limit = page_limit
+
+        # tracking
         self.seen_pages: Set[str] = set()
         self.bytes_stored = 0
         self.count_fetched = 0
+
         self.dir = ensure_dirs(self.host, self.ts)
         self.on_progress = on_progress
         
         self.graph_nodes: Set[str] = set()
         self.graph_edges: Set[Tuple[str, str]] = set()
 
+    # absolute url to local path
     def local_path_for(self, url: str) -> str:
         ext = _ext_from_url(url)
         if ext in _ASSET_EXTS:
             return f"/archive/{self.host}/{self.ts}/local/{choose_name(url, ext)}"
         return f"/archive/{self.host}/{self.ts}/local/{choose_name(url, '.html')}"
 
+    # get url and return metadata
     async def fetch(self, session: ClientSession, url: str) -> Tuple[bytes, str]:
         async with session.get(url) as resp:
             data = await resp.read()
             ctype = resp.headers.get('Content-Type', '')
             return data, ctype
 
+    # BFS crawling
     async def crawl(self):
         queue: asyncio.Queue[Tuple[str,int]] = asyncio.Queue()
         await queue.put((self.root_url, 0))
         self.seen_pages.add(self.root_url)
+
+        # limit parallel HTTP requests
         sem = asyncio.Semaphore(8)
 
         async with ClientSession(timeout=DEFAULT_TIMEOUT) as session:
@@ -65,6 +79,8 @@ class Crawler:
                 url, d = await queue.get()
                 if d > self.depth:
                     continue
+
+                # fetch with parallel request limit
                 try:
                     async with sem:
                         data, ctype = await self.fetch(session, url)
@@ -72,6 +88,7 @@ class Crawler:
                     write_text(self.dir / 'original' / f"{choose_name(url, '.error.txt')}", f"{e}")
                     continue
 
+                # update tracking
                 self.count_fetched += 1
                 self.bytes_stored += len(data)
                 if self.on_progress:
@@ -83,11 +100,13 @@ class Crawler:
                 self.graph_nodes.add(url)
 
                 if 'text/html' in ctype:
+                    # save original html and locally written reversion
                     html = data.decode('utf-8', errors='ignore')
                     rewritten, links, assets = rewrite_html(url, html, self.local_path_for)
                     write_text(self.dir / 'original' / f"{choose_name(url, '.html')}", html)
                     write_text(self.dir / 'local' / f"{choose_name(url, '.html')}", rewritten)
 
+                    # enqueue links for BFS
                     for l in links:
                         if same_host(self.root_url, l):
                             self.graph_nodes.add(l)
@@ -96,6 +115,7 @@ class Crawler:
                                 self.seen_pages.add(l)
                                 await queue.put((l, d+1))
 
+                    # get and store assets that are referenced in this page
                     for a in assets:
                         try:
                             async with sem:
@@ -120,11 +140,14 @@ class Crawler:
                                         self.bytes_stored += len(cadata)
                                     except Exception:
                                         pass
+                            # non css (store as is)
                             else:
                                 write_bytes(self.dir / 'local' / f"{choose_name(a, aext if aext in _ASSET_EXTS else '')}", adata)
                                 self.bytes_stored += len(adata)
+                        # ignore individual assest failures and continue
                         except Exception:
                             pass
+                # non HTML root
                 else:
                     aext = _ext_from_url(url)
                     write_bytes(self.dir / 'local' / f"{choose_name(url, aext if aext in _ASSET_EXTS else '')}", data)
@@ -140,12 +163,14 @@ class Crawler:
         """
         write_text(self.dir / 'local' / 'index.html', landing)
 
+        # persist graph
         graph = {
             "nodes": [{"id": u} for u in sorted(self.graph_nodes)],
             "edges": [{"source": s, "target": t} for (s, t) in sorted(self.graph_edges)]
         }
         write_text(self.dir / 'graph.json', json.dumps(graph, indent=2))
 
+    # add capture entry to host index.json
     def finalize_index(self, started_at: str, status: str = 'success', error: str | None = None):
         idx = load_index(self.host)
         entry = {
